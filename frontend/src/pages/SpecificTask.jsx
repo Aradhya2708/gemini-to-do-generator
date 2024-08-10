@@ -1,21 +1,48 @@
-// src/pages/SpecificTasks.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import TaskList from '../components/TaskList';
 
 const SpecificTasks = () => {
-  const [tasks, setTasks] = useState([
-    { title: 'Email Task 1', description: 'Description of Email Task 1' },
-    { title: 'Email Task 2', description: 'Description of Email Task 2' },
-  ]);
+  const [tasks, setTasks] = useState([]);
 
-  const handleAdd = (task) => {
-    console.log('Add task:', task);
-    // Add task to the main list logic
+  useEffect(() => {
+    // Fetch todos when the component mounts
+    const fetchTodos = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/todos', {
+          withCredentials: true, // Ensure credentials are sent
+        });
+        setTasks(response.data);
+      } catch (error) {
+        console.error('Error fetching todos:', error);
+      }
+    };
+
+    fetchTodos();
+  }, []);
+
+  const handleAdd = async (task) => {
+    try {
+      await axios.patch(`http://localhost:5000/todos/${task._id}/approve`, null, {
+        withCredentials: true, // Ensure credentials are sent
+      });
+      setTasks(tasks.map(t => 
+        t._id === task._id ? { ...t, approved: true } : t
+      )); // Update local state
+    } catch (error) {
+      console.error('Error approving task:', error);
+    }
   };
 
-  const handleDelete = (task) => {
-    console.log('Delete task:', task);
-    // Delete task logic
+  const handleDelete = async (task) => {
+    try {
+      await axios.delete(`http://localhost:5000/todos/${task._id}`, {
+        withCredentials: true, // Ensure credentials are sent
+      });
+      setTasks(tasks.filter(t => t._id !== task._id)); // Update local state
+    } catch (error) {
+      console.error('Error deleting task:', error);
+    }
   };
 
   return (

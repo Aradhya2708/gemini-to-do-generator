@@ -1,54 +1,91 @@
-// fetch, process
-
 import { google } from 'googleapis';
-// import axios from 'axios';
+import MailParser from 'mailparser'; // Import mailparser
+import Todo from '../models/todo.model.js';
+
+// gemini imports:
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// Access your API key as an environment variable (see "Set up your API key" above)
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY_A);
+
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 const OAuth2 = google.auth.OAuth2;
 
 const fetchEmails = async (req, res) => {
-    // res.send("fetching emails")
-    try {
-        const user = req.user; // Assuming you have a middleware that sets req.user from session
-        const oauth2Client = new OAuth2(
-            process.env.GOOGLE_CLIENT_ID,
-            process.env.GOOGLE_CLIENT_SECRET,
-            process.env.GOOGLE_REDIRECT_URI
-        );
-        oauth2Client.setCredentials(user.tokens);
+	try {
+		const user = req.user; // Assuming you have a middleware that sets req.user from session
+		const oauth2Client = new OAuth2(
+			process.env.GOOGLE_CLIENT_ID,
+			process.env.GOOGLE_CLIENT_SECRET,
+			process.env.GOOGLE_REDIRECT_URI
+		);
+		oauth2Client.setCredentials(user.tokens);
 
-        const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+		const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-        // Fetch user's emails
-        const response = await gmail.users.messages.list({
-            userId: 'me',
-            maxResults: user.config.emailsToScan, // Adjust as needed
-        });
+		// Fetch user's emails
+		const response = await gmail.users.messages.list({
+			userId: 'me',
+			maxResults: 5 // user.config.emailsToScan, // Use the number of emails to scan from user config
+		});
 
-        const messageIds = response.data.messages.map(message => message.id);
+		const messageIds = response.data.messages.map((message) => message.id);
 
-        // Fetch email details
-        const emailPromises = messageIds.map(id => 
-            gmail.users.messages.get({ userId: 'me', id })
-        );
-        const emailDetails = await Promise.all(emailPromises);
+		for (let messageId of messageIds) {
+			// Check if the emailId already exists in the database
+			const existingTodo = await Todo.findOne({ emailId: messageId });
+			if (existingTodo) {
+				console.log(`Skipping email with ID ${messageId} as it already exists in the database.`);
+				continue;
+			}
 
-        // Extract necessary information
-        const emailData = emailDetails.map(email => ({
-            subject: email.data.payload.headers.find(header => header.name === 'Subject')?.value,
-            body: email.data.snippet,
-        }));
+			const message = await gmail.users.messages.get({
+				userId: 'me',
+				id: messageId,
+				format: 'raw',
+			});
 
-        // // Send emails to LLM (Replace this with actual LLM API call) // needs changes
-        // const llmResponse = await axios.post('https://api.llm.example.com/generate-todo', {
-        //     emails: emailData,
-        // });
+			const raw = message.data.raw;
+			const buffer = Buffer.from(raw, 'base64');
+			const parsedEmail = await MailParser.simpleParser(buffer);
+			const snippet =
+				parsedEmail.text?.substring(0, 100) || 'No Body Content';
+			const geminiResponse = await gemini_func(
+				`From the given mail content, extract the task to do, if any. If no task to extract respond with "0", else respond with a single line, 20-30 words (unformatted, no *s or other stuff)statement describing the task at hand. Mail Content:- from: ${
+					parsedEmail.from
+				}, subject: ${parsedEmail.subject || 'No Subject'}, body: ${
+					parsedEmail.text?.replace(/\r\n/g, '\n') ||
+					'No Body Content'
+				}`
+			);
 
-        // Send the to-do list back to the client
-        res.json(llmResponse.data);
-    } catch (error) {
-        console.error('Error fetching and processing emails:', error);
-        res.status(500).send('Failed to process emails');
-    }
+			const todo = new Todo({
+				userId: user._id,
+				from: parsedEmail.from.text,
+				subject: parsedEmail.subject || 'No Subject',
+				snippet: snippet || 'No Snippet Content',
+				task: geminiResponse,
+				emailId: messageId,
+			});
+
+			await todo.save();
+		}
+
+		res.json({ message: 'Tasks have been saved to the database' });
+	} catch (error) {
+		console.error('Error fetching and processing emails:', error);
+		res.status(500).send('Failed to process emails');
+	}
 };
+
+async function gemini_func(prompt) {
+	const result = await model.generateContent(prompt);
+	console.log(result, ': result\n', result.candidates?.[0], ': candidate\n');
+	const responseText = result.response.text() || 'No response';
+	console.log(`Response Text: ${responseText}\n`);
+	return responseText;
+}
+
 
 export { fetchEmails };

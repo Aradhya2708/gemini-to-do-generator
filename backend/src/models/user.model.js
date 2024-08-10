@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
     expiry_date: Number,
   },
   config: {
-    emailsToScan:{type: Number, default: 10}
+    emailsToScan:{type: Number, default: 1}
   },
   token: { type: String } // This is where you'll store the session token
 });
