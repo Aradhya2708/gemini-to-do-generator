@@ -1,9 +1,22 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 
 const Settings = () => {
   // State for inputs
-  const [emailScanCount, setEmailScanCount] = useState(10); // Default 10 emails
-  const [notificationDays, setNotificationDays] = useState(1); // Default 1 day before
+  const [emailScanCount, setEmailScanCount] = useState(10); 
+  const [notificationDays, setNotificationDays] = useState(1);
+  const handleSaveSettings = async () => {
+    try {
+      await axios.put('http://localhost:5000/user/settings', {
+        emailScanCount,
+        userId: 'your-user-id-here', // replace with actual user ID, possibly from context or state
+      });
+      alert(`Settings saved: Scan ${emailScanCount} past emails, Notify ${notificationDays} days before.`);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      alert('Failed to save settings.');
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
@@ -45,9 +58,7 @@ const Settings = () => {
 
         <button
           className="w-full px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
-          onClick={() => {
-            alert(`Settings saved: Scan ${emailScanCount} past emails, Notify ${notificationDays} days before.`);
-          }}
+          onClick={handleSaveSettings}
         >
           Save Settings
         </button>
