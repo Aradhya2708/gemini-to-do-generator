@@ -29,10 +29,14 @@ const NavBar = () => {
 		}
 	};
 
-	const handleLogout = () => {
-		// Add logout logic here (e.g., clear auth tokens, redirect to login)
-		console.log('User logged out');
-		navigate('/'); // Redirect to login page
+	const handleLogout = async () => {
+		try {
+			await axios.get("http://localhost:5000/protected/route")
+			console.log('User logged out');
+			navigate('/'); // Redirect to login page
+		} catch (error) {
+			console.error('Error logging out: ', error)
+		}
 	};
 
 	const handleSettings = () => {
