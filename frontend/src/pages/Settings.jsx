@@ -9,8 +9,8 @@ const Settings = () => {
     try {
       await axios.put('http://localhost:5000/user/settings', {
         emailScanCount,
-        userId: 'your-user-id-here', // replace with actual user ID, possibly from context or state
-      });
+     // replace with actual user ID, possibly from context or state
+      }, {withCredentials: true});
       alert(`Settings saved: Scan ${emailScanCount} past emails, Notify ${notificationDays} days before.`);
     } catch (error) {
       console.error('Error saving settings:', error);

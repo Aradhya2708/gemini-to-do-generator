@@ -28,6 +28,6 @@ app.use('/protected', protectedRoutes);
 app.use('/auth', authRoutes);
 app.use('/emails', authenticateUser, emailRoutes);
 app.use('/todos', authenticateUser, todoRoutes); // Add todo routes
-app.use('/users', authenticateUser, userRoutes);
+app.use('/user', authenticateUser, userRoutes);
 
 export { app };

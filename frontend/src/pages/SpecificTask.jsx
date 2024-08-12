@@ -6,11 +6,10 @@ const SpecificTasks = () => {
   const [tasks, setTasks] = useState([]);
 
   useEffect(() => {
-    // Fetch todos when the component mounts
     const fetchTodos = async () => {
       try {
         const response = await axios.get('http://localhost:5000/todos', {
-          withCredentials: true, // Ensure credentials are sent
+          withCredentials: true, 
         });
         setTasks(response.data);
       } catch (error) {
@@ -24,11 +23,11 @@ const SpecificTasks = () => {
   const handleAdd = async (task) => {
     try {
       await axios.patch(`http://localhost:5000/todos/${task._id}/approve`, null, {
-        withCredentials: true, // Ensure credentials are sent
+        withCredentials: true, 
       });
       setTasks(tasks.map(t => 
         t._id === task._id ? { ...t, approved: true } : t
-      )); // Update local state
+      )); 
     } catch (error) {
       console.error('Error approving task:', error);
     }
@@ -37,9 +36,9 @@ const SpecificTasks = () => {
   const handleDelete = async (task) => {
     try {
       await axios.delete(`http://localhost:5000/todos/${task._id}`, {
-        withCredentials: true, // Ensure credentials are sent
+        withCredentials: true, 
       });
-      setTasks(tasks.filter(t => t._id !== task._id)); // Update local state
+      setTasks(tasks.filter(t => t._id !== task._id));
     } catch (error) {
       console.error('Error deleting task:', error);
     }
